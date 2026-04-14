@@ -1,0 +1,33 @@
+# Certificate files - DO NOT commit private keys or certificates
+certs/*.pem
+certs/*-cert.pem
+certs/*-key.pem
+certs/*-client-cert.pem
+certs/*-client-key.pem
+certs/*.jks
+certs/*.p12
+certs/*.txt
+certs/*.csr
+certs/*.conf
+certs/*.srl
+
+# Keep only the generation script
+!certs/generate-certs.sh
+!certs/.gitkeep
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+*.log

@@ -1,0 +1,144 @@
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KRaftController
+metadata:
+  name: kraftcontroller
+  namespace: confluent
+spec:
+  dataVolumeCapacity: 10Gi
+  image:
+    application: confluentinc/cp-server:7.9.4
+    init: confluentinc/confluent-init-container:2.11.1
+  listeners:
+    controller:
+      tls:
+        enabled: true
+      authentication:
+        type: mtls
+        principalMappingRules:
+          - RULE:.*CN=([a-zA-Z0-9._-]*).*$/$1/,DEFAULT
+  tls:
+    secretRef: kraftcontroller-tls
+  replicas: 3
+  podTemplate:
+    resources:
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+      requests:
+        memory: 512Mi
+        cpu: 200m
+  configOverrides:
+    server:
+      - sni.host.check.enabled=false
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  replicas: 3
+  podTemplate:
+    resources:
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+      requests:
+        memory: 1Gi
+        cpu: 500m
+  image:
+    application: confluentinc/cp-server:7.9.4
+    init: confluentinc/confluent-init-container:2.11.1
+  dataVolumeCapacity: 10Gi
+  tls:
+    secretRef: kafka-tls
+  listeners:
+    internal:
+      authentication:
+        type: mtls
+        principalMappingRules:
+          - RULE:.*CN=([a-zA-Z0-9._-]*).*$/$1/,DEFAULT
+      tls:
+        enabled: true
+  dependencies:
+    kRaftController:
+      controllerListener:
+        tls:
+          enabled: true
+        authentication:
+          type: mtls
+      clusterRef:
+        name: kraftcontroller
+  configOverrides:
+    server:
+      - sni.host.check.enabled=false
+      - offsets.topic.replication.factor=3
+      - transaction.state.log.replication.factor=3
+      - min.insync.replicas=2
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: ControlCenter
+metadata:
+  name: controlcenter
+  namespace: confluent
+spec:
+  replicas: 1
+  podTemplate:
+    resources:
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+      requests:
+        memory: 2Gi
+        cpu: 500m
+  image:
+    application: confluentinc/cp-enterprise-control-center-next-gen:2.0.0
+    init: confluentinc/confluent-init-container:2.11.1
+  dataVolumeCapacity: 10Gi
+  tls:
+    secretRef: controlcenter-tls
+  authentication:
+    type: mtls
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9071
+      authentication:
+        type: mtls
+      tls:
+        enabled: true
+    prometheusClient:
+      url: https://controlcenter.confluent.svc.cluster.local:9090
+      authentication:
+        type: mtls
+      tls:
+        enabled: true
+        secretRef: prometheus-client-tls
+    alertManagerClient:
+      url: https://controlcenter.confluent.svc.cluster.local:9093
+      authentication:
+        type: mtls
+      tls:
+        enabled: true
+        secretRef: alertmanager-client-tls
+  services:
+    prometheus:
+       image: confluentinc/cp-enterprise-prometheus:2.0.0
+       authentication:
+         type: mtls
+       tls:
+         secretRef: prometheus-tls
+       pvc:
+         dataVolumeCapacity: 10Gi
+    alertmanager:
+       image: confluentinc/cp-enterprise-alertmanager:2.0.0
+       authentication:
+         type: mtls
+       tls:
+         secretRef: alertmanager-tls
+       pvc:
+         dataVolumeCapacity: 10Gi
+  configOverrides:
+    server:
+      - sni.host.check.enabled=false
+      - confluent.controlcenter.internal.topics.replication=1

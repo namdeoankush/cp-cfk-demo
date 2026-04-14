@@ -1,0 +1,93 @@
+================================================================================
+  CONFLUENT PLATFORM 7.9.4 - KRAFT MODE WITH CONTROL CENTER NEXT-GEN
+================================================================================
+
+Created: April 14, 2026
+Location: ~/Handson/CFK/
+
+WHAT'S INCLUDED:
+----------------
+✅ Confluent Platform 7.9.4 (KRaft mode - NO ZooKeeper)
+✅ Control Center Next-Gen 2.0 with embedded Prometheus & AlertManager
+✅ Full mTLS security between all components
+✅ Automated deployment scripts
+✅ Certificate generation scripts
+✅ Complete documentation
+
+DIRECTORY STRUCTURE:
+--------------------
+CFK/
+├── README.md                     # Complete documentation
+├── QUICKSTART.md                 # 3-step quick start guide
+├── .gitignore                    # Git ignore rules (excludes certs)
+│
+├── certs/
+│   ├── generate-certs.sh         # Certificate generation script
+│   └── .gitkeep                  # Preserves directory in git
+│
+├── manifests/
+│   └── confluent-platform.yaml   # Kubernetes deployment manifest
+│
+└── scripts/
+    ├── deploy.sh                 # Automated deployment script
+    └── cleanup.sh                # Cleanup script
+
+COMPONENTS:
+-----------
+• KRaft Controllers:   3 replicas (CP 7.9.4)
+• Kafka Brokers:       3 replicas (CP 7.9.4)  
+• Control Center:      1 replica with 3 containers:
+  - Control Center     (Next-Gen 2.0)
+  - Prometheus         (2.0.0)
+  - AlertManager       (2.0.0)
+
+SECURITY:
+---------
+• All components use mTLS authentication
+• Certificates auto-generated with proper SANs and EKU extensions
+• Self-signed CA (suitable for demos/testing)
+
+KEY CONFIGURATION:
+------------------
+• CFK Operator:         3.1.1 (chart 0.1351.59)
+• Init Container:       2.11.1
+• No ZooKeeper:         Pure KRaft mode
+• Namespace:            confluent
+• Prometheus enabled:   YES (embedded in Control Center)
+• AlertManager enabled: YES (embedded in Control Center)
+
+DEPLOYMENT:
+-----------
+1. Generate certificates:   cd certs && ./generate-certs.sh
+2. Deploy platform:         cd scripts && ./deploy.sh
+3. Access Control Center:   kubectl port-forward -n confluent controlcenter-0 9021:9021
+                           Open: https://localhost:9021
+
+CLEANUP:
+--------
+cd scripts && ./cleanup.sh
+
+GIT READY:
+----------
+✅ .gitignore configured to exclude sensitive files
+✅ Only source files and scripts are tracked
+✅ Certificate files are excluded (generated locally)
+✅ Ready to commit and push to repository
+
+TESTING STATUS:
+---------------
+✅ Tested on minikube
+✅ All components running (3/3 containers in Control Center)
+✅ mTLS working correctly
+✅ Prometheus metrics collection verified  
+✅ AlertManager integration verified
+✅ Control Center UI accessible
+
+NEXT STEPS:
+-----------
+1. Review README.md for detailed documentation
+2. Follow QUICKSTART.md for deployment
+3. Add to git: git add . && git commit -m "Add CFK demo"
+4. Push to remote: git push
+
+================================================================================

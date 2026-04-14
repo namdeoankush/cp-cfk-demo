@@ -1,0 +1,31 @@
+# Git Initialization Commands
+# ===========================
+# Run these commands to initialize the git repository and make your first commit
+
+cd ~/Handson/CFK
+
+# Initialize git repository
+git init
+
+# Add all files
+git add .
+
+# Check what will be committed (should NOT include *.pem, *.jks, *.p12)
+git status
+
+# Make initial commit
+git commit -m "Initial commit: Confluent Platform 7.9.4 KRaft with Control Center Next-Gen
+
+- Added deployment manifests for CP 7.9.4 in KRaft mode
+- Added Control Center Next-Gen 2.0 with embedded Prometheus and AlertManager
+- Added certificate generation scripts with proper EKU extensions
+- Added automated deployment and cleanup scripts
+- Full mTLS security between all components
+- No ZooKeeper dependencies (pure KRaft mode)
+- Tested and verified on minikube"
+
+# Add remote (replace with your actual repository URL)
+# git remote add origin <your-repo-url>
+
+# Push to remote
+# git push -u origin main
