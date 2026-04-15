@@ -258,32 +258,12 @@ If you see TLS handshake errors:
    ./deploy.sh
    ```
 
-### CFK Operator CrashLooping
-
-This is a known issue with CFK 3.1.1 - the operator may crash periodically but the deployed resources continue to function normally. This can be safely ignored.
-
-## 📚 Key Learnings
-
-### Why CFK 3.1.1 and Not 3.2.1?
-
-- **CFK 3.2.1**: Has issues with Control Center Next-Gen deployment. The operator doesn't create the required run scripts for embedded Prometheus/AlertManager sidecars (`/mnt/config/prometheus/bin/run`).
-
-- **CFK 3.1.1**: Works correctly with Control Center Next-Gen 2.0.0, properly initializing all three containers.
-
 ### Certificate Format Requirements
 
 - **Kafka Components** (KRaft, Kafka, Control Center main): Use JKS format
 - **Embedded Services** (Prometheus, AlertManager): Require PEM format with **Extended Key Usage (EKU)** extensions
   - Without EKU: `Extended key usage does not permit use for TLS server authentication`
   - With EKU: Successful TLS handshake
-
-### No ZooKeeper Required
-
-This deployment uses **KRaft mode** exclusively:
-- No ZooKeeper dependencies
-- Simpler architecture
-- Better performance
-- Future-proof (ZooKeeper removal is the future of Kafka)
 
 ## 📖 References
 
