@@ -42,11 +42,16 @@ This repository contains a working deployment of **Confluent Platform 7.9.4** ru
 
 ## 🔧 Prerequisites
 
-- **Kubernetes cluster** (tested with minikube)
-- **kubectl** configured to access your cluster
-- **helm** version 3.x
-- **openssl** for certificate generation
-- **keytool** (comes with Java JDK)
+> 📖 **See [PREREQUISITES.md](PREREQUISITES.md) for detailed installation instructions and production setup requirements.**
+
+**Quick checklist for local development:**
+
+- **Docker Desktop** - Container runtime (must be running)
+- **Kubernetes cluster** - minikube (tested) or Docker Desktop with Kubernetes enabled
+- **kubectl** - Configured to access your cluster
+- **helm** - Version 3.x
+- **openssl** - For certificate generation
+- **keytool** - Comes with Java JDK
 
 ## 🚀 Quick Start
 
@@ -212,13 +217,17 @@ This will prompt you to confirm deletion of:
 ```
 CFK/
 ├── README.md                    # This file
+├── PREREQUISITES.md             # Detailed prerequisites for local and production setup
+├── SECURITY.md                  # Security configuration details
+├── CERTIFICATE_ARCHITECTURE.md  # Certificate architecture documentation
 ├── certs/
 │   └── generate-certs.sh        # Certificate generation script
 ├── manifests/
 │   └── confluent-platform.yaml  # Kubernetes manifests
 └── scripts/
     ├── deploy.sh                # Deployment automation script
-    └── cleanup.sh               # Cleanup script
+    ├── cleanup.sh               # Cleanup script
+    └── validate-k8s.sh          # Kubernetes validation script
 ```
 
 ## 🐛 Troubleshooting
