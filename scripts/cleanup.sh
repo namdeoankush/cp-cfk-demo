@@ -1,6 +1,12 @@
 #!/bin/bash
+set -e
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 NAMESPACE="confluent"
+MANIFEST_DIR="${PROJECT_DIR}/manifests"
 
 echo "🧹 Cleaning up Confluent Platform deployment"
 echo "============================================="
@@ -15,8 +21,15 @@ if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
 fi
 
 echo "🗑️  Step 1: Deleting Confluent Platform components..."
-kubectl delete -f ../manifests/confluent-platform.yaml --ignore-not-found=true
-echo "✅ Components deleted"
+if [ -f "${MANIFEST_DIR}/confluent-platform.yaml" ]; then
+    kubectl delete -f ${MANIFEST_DIR}/confluent-platform.yaml --ignore-not-found=true
+    echo "✅ Components deleted"
+else
+    echo "⚠️  Manifest file not found: ${MANIFEST_DIR}/confluent-platform.yaml"
+    echo "   Attempting to delete components by label..."
+    kubectl delete kraftcontroller,kafka,controlcenter -n ${NAMESPACE} --all --ignore-not-found=true
+    echo "✅ Components deleted by label"
+fi
 echo ""
 
 echo "🗑️  Step 2: Deleting secrets..."
@@ -42,7 +55,28 @@ echo ""
 if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
     echo "🗑️  Step 4: Deleting namespace..."
     kubectl delete namespace ${NAMESPACE} --ignore-not-found=true
-    echo "✅ Namespace deleted"
+
+    # Wait for namespace deletion with timeout
+    echo "⏳ Waiting for namespace deletion..."
+    for i in {1..30}; do
+        if ! kubectl get namespace ${NAMESPACE} &>/dev/null; then
+            echo "✅ Namespace deleted"
+            break
+        fi
+
+        # Check if namespace is stuck in Terminating state
+        NS_STATUS=$(kubectl get namespace ${NAMESPACE} -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
+        if [ "$NS_STATUS" = "Terminating" ] && [ $i -gt 10 ]; then
+            echo ""
+            echo "⚠️  Namespace stuck in Terminating state. Running force cleanup..."
+            echo ""
+            ${SCRIPT_DIR}/force-cleanup-namespace.sh
+            break
+        fi
+
+        echo "   Waiting... ($i/30)"
+        sleep 2
+    done
 else
     echo "⏭️  Skipping namespace deletion"
 fi
@@ -50,4 +84,4 @@ echo ""
 
 echo "🎉 Cleanup complete!"
 echo ""
-echo "📝 To redeploy, run: ./deploy.sh"
+echo "📝 To redeploy, run: ./scripts/deploy.sh"
