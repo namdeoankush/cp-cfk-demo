@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
+
 NAMESPACE="confluent"
 CFK_VERSION="0.1351.59"  # CFK 3.1.1
-CERT_DIR="../certs"
+CERT_DIR="${PROJECT_DIR}/certs"
+MANIFEST_DIR="${PROJECT_DIR}/manifests"
 
 echo "🚀 Deploying Confluent Platform 7.9.4 with KRaft and Control Center Next-Gen"
 echo "============================================================================="
@@ -44,14 +49,12 @@ echo ""
 
 # Step 4: Generate certificates if needed
 echo "🔐 Step 4: Checking certificates..."
-cd ${CERT_DIR}
-if [ ! -f "ca-cert.pem" ] || [ ! -f "kraftcontroller.keystore.jks" ]; then
+if [ ! -f "${CERT_DIR}/ca-cert.pem" ] || [ ! -f "${CERT_DIR}/kraftcontroller.keystore.jks" ]; then
     echo "   Certificates not found. Generating..."
-    ./generate-certs.sh
+    (cd ${CERT_DIR} && ./generate-certs.sh)
 else
     echo "   Certificates already exist. Skipping generation."
 fi
-cd - > /dev/null
 echo ""
 
 # Step 5: Create Kubernetes secrets
@@ -129,7 +132,7 @@ echo ""
 
 # Step 6: Deploy Confluent Platform
 echo "🎯 Step 6: Deploying Confluent Platform components..."
-kubectl apply -f ../manifests/confluent-platform.yaml
+kubectl apply -f ${MANIFEST_DIR}/confluent-platform.yaml
 echo "✅ Manifests applied"
 echo ""
 
@@ -137,17 +140,42 @@ echo ""
 echo "⏳ Step 7: Waiting for components to be ready..."
 echo ""
 
-echo "   Waiting for KRaft Controllers (3/3)..."
-kubectl wait --for=condition=ready pod -l app=kraftcontroller -n ${NAMESPACE} --timeout=600s
+# Wait for KRaftController CRD to create pods
+echo "   Waiting for KRaft Controller resource to be created..."
+for i in {1..30}; do
+    if kubectl get kraftcontroller kraftcontroller -n ${NAMESPACE} &>/dev/null; then
+        echo "   ✅ KRaft Controller resource exists"
+        break
+    fi
+    echo "   Waiting for KRaft Controller resource... ($i/30)"
+    sleep 2
+done
+echo ""
+
+echo "   Waiting for KRaft Controllers (3/3 pods)..."
+kubectl wait --for=condition=ready pod -l platform.confluent.io/type=kraftcontroller -n ${NAMESPACE} --timeout=600s 2>/dev/null || \
+    kubectl wait --for=condition=ready pod -l statefulset.kubernetes.io/pod-name -n ${NAMESPACE} --timeout=600s 2>/dev/null || \
+    (echo "   Waiting for pods to be created..." && sleep 30 && kubectl wait --for=condition=ready pod -l platform.confluent.io/type=kraftcontroller -n ${NAMESPACE} --timeout=600s)
 echo "   ✅ KRaft Controllers ready"
 echo ""
 
-echo "   Waiting for Kafka Brokers (3/3)..."
-kubectl wait --for=condition=ready pod -l app=kafka -n ${NAMESPACE} --timeout=600s
+echo "   Waiting for Kafka Brokers (3/3 pods)..."
+kubectl wait --for=condition=ready pod -l platform.confluent.io/type=kafka -n ${NAMESPACE} --timeout=600s 2>/dev/null || \
+    (echo "   Waiting for Kafka pods to be created..." && sleep 30 && kubectl wait --for=condition=ready pod -l platform.confluent.io/type=kafka -n ${NAMESPACE} --timeout=600s)
 echo "   ✅ Kafka Brokers ready"
 echo ""
 
 echo "   Waiting for Control Center (may take a few minutes)..."
+# Wait for the pod to exist first
+for i in {1..60}; do
+    if kubectl get pod controlcenter-0 -n ${NAMESPACE} &>/dev/null; then
+        echo "   Control Center pod exists, waiting for readiness..."
+        break
+    fi
+    echo "   Waiting for Control Center pod to be created... ($i/60)"
+    sleep 5
+done
+
 # Control Center has 3 containers, so we need to be patient
 for i in {1..60}; do
     READY=$(kubectl get pod controlcenter-0 -n ${NAMESPACE} -o jsonpath='{.status.containerStatuses[*].ready}' 2>/dev/null | grep -o "true" | wc -l | tr -d ' ')
